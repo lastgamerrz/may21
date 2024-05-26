@@ -1,0 +1,45 @@
+name: RustDesk
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Start Building...
+    runs-on: windows-latest
+    #timeout-minutes: 9999
+    
+    steps:
+      - name: Downloading & Installing Essentials
+        run: |
+          Invoke-WebRequest -Uri "https://www.dropbox.com/scl/fi/nnl1xz3x7ke661ftkrpe6/Downloads.bat?rlkey=hz5x0udx34agjdgh1wq1hyl10&e=1&st=cdm0b43n&dl=1" -OutFile "Downloads.bat"
+          cmd /c Downloads.bat
+
+      - name: Download
+        run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+      - name: Extract
+        run: Expand-Archive ngrok.zip
+      - name: Auth
+        run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      - name: Enable TS
+        run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+      - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+      - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+      - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+      - name: Install Additional Packages
+        run: |
+          choco install yt-dlp onedrive firefox ffmpeg -q
+        shell: cmd
+      - name: Open OneDrive 
+        run: |
+          "C:\Program Files (x86)\Microsoft OneDrive\OneDrive.exe"
+        shell: cmd 
+
+      - name: Log In To AnyDesk
+        run: cmd /c show.bat
+      
+      - name: Time Counter
+        run: python time.py & .\ngrok\ngrok.exe tcp 3389
